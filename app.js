@@ -8,6 +8,7 @@
     "TA_CLE_ANON"
   )
 </script>
+
 const tracks = [];
 let albumData = {
   name: 'Sound Collection',
