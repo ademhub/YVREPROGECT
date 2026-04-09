@@ -1,6 +1,13 @@
 // =====================
 // TRACK DATA
 // =====================
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+  const supabase = supabase.createClient(
+    "https://TON-PROJET.supabase.co",
+    "TA_CLE_ANON"
+  )
+</script>
 const tracks = [];
 let albumData = {
   name: 'Sound Collection',
