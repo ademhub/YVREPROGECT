@@ -3,7 +3,7 @@
 // <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_V8E7G_3kvBhlemSmKpS_Vw_v9PyBXg2';
+const SUPABASE_KEY = 'sb_publishable_GqINayvdyOYh0hkTL22YpA_m47e10qI';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Fonctions utilitaires
