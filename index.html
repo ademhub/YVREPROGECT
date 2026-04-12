@@ -204,12 +204,33 @@ input[type=range].vsl::-webkit-slider-thumb{
   transform:translateY(-50%) scale(0.88);
   z-index:100;opacity:0;pointer-events:none;
   transition:opacity .4s var(--ease),transform .4s var(--spring);
-  user-select:none;
-  touch-action:none;
+  user-select:none;touch-action:none;
 }
 #mini.vis{opacity:1;pointer-events:all;transform:translateY(-50%) scale(1);}
-#mini.dragging{transition:opacity .4s var(--ease) !important;transform:translateY(0) scale(1.08) !important;}
-#mini.snap{transition:opacity .4s var(--ease),transform .4s var(--spring),right .32s var(--spring),top .32s var(--spring) !important;}
+#mini.dragging{transition:none !important;}
+#mini.snap{transition:right .32s var(--spring),top .32s var(--spring) !important;}
+
+@keyframes mini-breathe{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.032);}
+}
+@keyframes mini-bass{
+  0%{transform:scale(1);}
+  40%{transform:scale(1.07);}
+  100%{transform:scale(1);}
+}
+@keyframes mini-glow-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(180,0,0,0),0 6px 36px rgba(0,0,0,.75);}
+  50%{box-shadow:0 0 18px 4px rgba(200,0,0,0.35),0 6px 36px rgba(0,0,0,.75);}
+}
+@keyframes cover-spin{
+  from{transform:rotate(0deg);}
+  to{transform:rotate(360deg);}
+}
+@keyframes vol-hint{
+  0%,100%{opacity:0;transform:translateX(8px);}
+  20%,80%{opacity:1;transform:translateX(0);}
+}
 .mini-wrap{
   width:52px;
   background:rgba(15,15,15,0.94);
@@ -383,12 +404,27 @@ body.paused #page-player.active .p-cov-wrap{
 
 <!-- MINI PLAYER (right) -->
 <div id="mini">
-  <div class="mini-wrap" onclick="openPlayer()">
-    <div class="mini-img"><img id="mini-art" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" /></div>
-    <button class="mini-pp" id="mini-pp" onclick="miniTgl(event)">
+  <div class="mini-vol-hint" id="mini-vol-hint">🔊 80%</div>
+  <div class="mini-wrap" id="mini-wrap">
+    <div class="mini-glow"></div>
+    <div class="mini-img"><img id="mini-art" /></div>
+    <div class="mini-eq">
+      <div class="mini-eq-bar" style="height:4px"></div>
+      <div class="mini-eq-bar" style="height:7px"></div>
+      <div class="mini-eq-bar" style="height:4px"></div>
+    </div>
+    <button class="mini-pp" id="mini-pp">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
     </button>
     <div class="mini-bar"><div class="mini-fill" id="mini-fill"></div></div>
+    <div class="mini-hidden" id="mini-hidden">
+      <button class="mini-hidden-btn" id="mini-like-btn" title="Like">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+      </button>
+      <button class="mini-hidden-btn" id="mini-shuf-btn" title="Shuffle">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -573,6 +609,8 @@ function togglePlay(){
   else{go();}
 }
 function miniTgl(e){e.stopPropagation();togglePlay();}
+function miniNext(e){e.stopPropagation();nextTrack();}
+function miniPrev(e){e.stopPropagation();prevTrack();}
 function nextTrack(anim){
   load(shuf?rnd():(idx+1)%T.length,true,true);
 }
@@ -594,14 +632,9 @@ function openPlayer(){goTo('player');}
 
 // ── LIQUID BACKGROUND ENGINE ──
 const TRACK_COLORS=[
-  ['#2a0a3a','#0a001a','#1a0030'],
-  ['#1a0800','#2a1500','#0a0500'],
-  ['#001a2a','#00080f','#00151f'],
-  ['#001a08','#000f04','#001a08'],
-  ['#200030','#0a0018','#1a0028'],
-  ['#1a0e00','#0f0700','#1a0a00'],
-  ['#00101a','#000810','#001525'],
-  ['#12001a','#080010','#180020'],
+  ['#3a0000','#1a0000','#2a0000'],
+  ['#2a0000','#1a0000','#3a0000'],
+  ['#3a0000','#2a0000','#1a0000'],
 ];
 
 let liquidAnim=null;
@@ -721,7 +754,11 @@ function refresh(){
   document.getElementById('p-cov-bg').src=COVER_IMG;
   document.getElementById('p-title').textContent=t.title;
   document.getElementById('p-artist').textContent=t.artist;
-  document.getElementById('mini-art').src=COVER_IMG;
+  const ma=document.getElementById('mini-art');
+  ma.src=COVER_IMG;ma.style.width='100%';ma.style.height='100%';ma.style.objectFit='cover';
+  // update like btn
+  const mlb=document.getElementById('mini-like-btn');
+  if(mlb) mlb.classList.toggle('on', liked.has(idx));
   document.getElementById('p-heart').style.color=liked.has(idx)?'var(--red)':'var(--w30)';
   document.querySelectorAll('.track').forEach((el,i)=>el.classList.toggle('now',i===idx));
   updateDynBg();
@@ -736,6 +773,8 @@ function uiPlay(){
   document.querySelectorAll('.track.now .bar').forEach(b=>b.style.animationPlayState=on?'running':'paused');
   document.body.classList.toggle('playing',on);
   document.body.classList.toggle('paused',!on);
+  const mw=document.getElementById('mini-wrap');
+  if(mw){mw.classList.toggle('playing',on);mw.classList.toggle('paused',!on);}
 }
 
 // ── Progress ──
@@ -861,6 +900,7 @@ function toast(m){const e=document.getElementById('toast');e.textContent=m;e.cla
   document.getElementById('mini').classList.remove('vis');
 
   initDrag();
+  initMini();
   initCoverDblClick();
   initKeyboard();
   addRipple(document.getElementById('btn-play'));
@@ -916,8 +956,94 @@ function tickAnalyzer(){
   for(let i=0;i<4;i++) bass+=analyzerData[i];
   bass=bass/(4*255);
   if(bass>0.35){
-    bassIntensity=Math.max(bassIntensity, Math.min(1,(bass-0.35)*2.5));
+    const newBass=Math.min(1,(bass-0.35)*2.5);
+    if(newBass>bassIntensity+0.2){
+      // strong hit - bounce mini player
+      const mw=document.getElementById('mini-wrap');
+      if(mw&&playing){
+        mw.classList.remove('bass-hit');
+        void mw.offsetWidth;
+        mw.classList.add('bass-hit');
+        setTimeout(()=>mw.classList.remove('bass-hit'),260);
+      }
+    }
+    bassIntensity=Math.max(bassIntensity,newBass);
   }
+}
+
+// ── Mini player interactions ──
+function initMini(){
+  const wrap=document.getElementById('mini-wrap');
+  const pp=document.getElementById('mini-pp');
+  const likeBtn=document.getElementById('mini-like-btn');
+  const shufBtn=document.getElementById('mini-shuf-btn');
+  if(!wrap)return;
+
+  let tapTimer=null,tapCount=0,longTimer=null;
+  let volDrag=false,volStartY=0,volStartVal=0;
+
+  // tap / double-tap / long-press on wrap
+  wrap.addEventListener('touchstart',e=>{
+    if(e.target===pp||e.target.closest('.mini-pp')||
+       e.target===likeBtn||e.target===shufBtn||
+       e.target.closest('.mini-hidden-btn')) return;
+    longTimer=setTimeout(()=>{longTimer=null;openPlayer();},500);
+    volDrag=false;volStartY=e.touches[0].clientY;volStartVal=audio.volume;
+  },{passive:true});
+
+  wrap.addEventListener('touchmove',e=>{
+    clearTimeout(longTimer);longTimer=null;
+    const dy=volStartY-e.touches[0].clientY;
+    if(Math.abs(dy)>10){
+      volDrag=true;
+      const newVol=Math.max(0,Math.min(1,volStartVal+dy/120));
+      audio.volume=newVol;
+      document.getElementById('vol').value=newVol*100;
+      localStorage.setItem('vol',newVol);
+      const hint=document.getElementById('mini-vol-hint');
+      if(hint){hint.textContent='🔊 '+Math.round(newVol*100)+'%';hint.classList.add('show');}
+    }
+  },{passive:true});
+
+  wrap.addEventListener('touchend',e=>{
+    clearTimeout(longTimer);longTimer=null;
+    const hint=document.getElementById('mini-vol-hint');
+    if(hint) setTimeout(()=>hint.classList.remove('show'),800);
+    if(volDrag){volDrag=false;return;}
+    if(e.target===pp||e.target.closest('.mini-pp')) return;
+    // tap count for double tap = skip
+    tapCount++;
+    if(tapTimer) clearTimeout(tapTimer);
+    tapTimer=setTimeout(()=>{
+      if(tapCount===1) togglePlay();
+      else if(tapCount>=2) nextTrack();
+      tapCount=0;
+    },220);
+  },{passive:true});
+
+  // swipe left/right on mini = change track
+  let sx=0;
+  wrap.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;},{passive:true});
+  wrap.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-sx;
+    if(Math.abs(dx)>30){dx<0?nextTrack():prevTrack();}
+  },{passive:true});
+
+  // mouse: click play/pause, no drag conflict
+  pp.addEventListener('click',e=>{e.stopPropagation();togglePlay();});
+
+  // like / shuffle buttons
+  if(likeBtn) likeBtn.addEventListener('click',e=>{
+    e.stopPropagation();
+    liked.has(idx)?liked.delete(idx):(liked.add(idx),toast('♥ Ajouté'));
+    localStorage.setItem('liked',JSON.stringify([...liked]));
+    likeBtn.classList.toggle('on',liked.has(idx));
+    document.getElementById('p-heart').style.color=liked.has(idx)?'var(--red)':'var(--w30)';
+  });
+  if(shufBtn) shufBtn.addEventListener('click',e=>{
+    e.stopPropagation();toggleShuffle();
+    shufBtn.classList.toggle('on',shuf);
+  });
 }
 
 // ── Drag mini player ──
