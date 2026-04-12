@@ -204,8 +204,12 @@ input[type=range].vsl::-webkit-slider-thumb{
   transform:translateY(-50%) scale(0.88);
   z-index:100;opacity:0;pointer-events:none;
   transition:opacity .4s var(--ease),transform .4s var(--spring);
+  user-select:none;
+  touch-action:none;
 }
 #mini.vis{opacity:1;pointer-events:all;transform:translateY(-50%) scale(1);}
+#mini.dragging{transition:opacity .4s var(--ease) !important;transform:translateY(0) scale(1.08) !important;}
+#mini.snap{transition:opacity .4s var(--ease),transform .4s var(--spring),right .32s var(--spring),top .32s var(--spring) !important;}
 .mini-wrap{
   width:52px;
   background:rgba(15,15,15,0.94);
@@ -268,7 +272,7 @@ input[type=range].vsl::-webkit-slider-thumb{
 
 <!-- PAGE ALBUM -->
 <div id="page-album" class="page active">
-  <div class="lbl">Bibliothèque</div>
+  <div class="lbl"></div>
   <div class="album-card" onclick="goTo('tracklist')">
     <div class="album-art">
       <div class="album-art-bg">
@@ -277,7 +281,7 @@ input[type=range].vsl::-webkit-slider-thumb{
     </div>
     <div class="album-text">
       <h2>Tracklist Vol.1</h2>
-      <div class="sub">Tracklist Vol.1 &nbsp;·&nbsp; 2024 &nbsp;·&nbsp; 3 titres</div>
+      <div class="sub">YVRE &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; 3 titres</div>
     </div>
   </div>
   <div class="album-btns">
@@ -304,7 +308,7 @@ input[type=range].vsl::-webkit-slider-thumb{
     <div class="tl-cov"><img id="tl-cover-img" style="width:100%;height:100%;object-fit:cover;" /></div>
     <div class="tl-meta">
       <h2>Tracklist Vol.1</h2>
-      <div class="ta">Mixed Artists</div>
+      <div class="ta">YVRE</div>
       <div class="tc">3 titres</div>
     </div>
   </div>
@@ -485,7 +489,6 @@ let tt;
 function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),2000);}
 
 (function init(){
-  // Set cover images
   document.getElementById('album-cover-img').src=COVER_IMG;
   document.getElementById('tl-cover-img').src=COVER_IMG;
   buildTracks();
@@ -493,7 +496,109 @@ function toast(m){const e=document.getElementById('toast');e.textContent=m;e.cla
   const sv=localStorage.getItem('vol');
   if(sv){audio.volume=parseFloat(sv);document.getElementById('vol').value=parseFloat(sv)*100;}
   document.getElementById('mini').classList.remove('vis');
+  initDrag();
 })();
+
+function initDrag(){
+  const el=document.getElementById('mini');
+  const W=()=>window.innerWidth;
+  const H=()=>window.innerHeight;
+  const EW=66; // element width approx
+  const EH=130; // element height approx
+  const MARGIN=14;
+
+  // Restore saved position
+  const saved=JSON.parse(localStorage.getItem('miniPos')||'null');
+  if(saved){
+    el.style.right='auto';
+    el.style.top=saved.top+'px';
+    el.style.left=saved.side==='left'?(MARGIN+'px'):'auto';
+    el.style.right=saved.side==='right'?(MARGIN+'px'):'auto';
+  }
+
+  let startX,startY,startElX,startElY,dragged=false;
+
+  function getElPos(){
+    const r=el.getBoundingClientRect();
+    return{x:r.left,y:r.top};
+  }
+
+  function onStart(cx,cy){
+    dragged=false;
+    const pos=getElPos();
+    startX=cx;startY=cy;
+    startElX=pos.x;startElY=pos.y;
+    el.style.transition='none';
+    el.style.right='auto';
+    el.style.left=startElX+'px';
+    el.style.top=startElY+'px';
+    el.style.transform='scale(1)';
+    el.classList.add('dragging');
+    el.classList.remove('snap');
+  }
+
+  function onMove(cx,cy){
+    const dx=cx-startX;
+    const dy=cy-startY;
+    if(Math.abs(dx)>4||Math.abs(dy)>4) dragged=true;
+    if(!dragged) return;
+    // Move freely but clamp vertically
+    let newY=startElY+dy;
+    newY=Math.max(MARGIN, Math.min(H()-EH-MARGIN, newY));
+    el.style.left=(startElX+dx)+'px';
+    el.style.top=newY+'px';
+  }
+
+  function onEnd(cx){
+    el.classList.remove('dragging');
+    el.classList.add('snap');
+    // Snap to nearest side
+    const pos=getElPos();
+    const midX=pos.x+EW/2;
+    const side=midX<W()/2?'left':'right';
+    el.style.left=side==='left'?(MARGIN+'px'):'auto';
+    el.style.right=side==='right'?(MARGIN+'px'):'auto';
+    // Save
+    const topVal=parseFloat(el.style.top)||H()/2-EH/2;
+    localStorage.setItem('miniPos',JSON.stringify({side,top:topVal}));
+    setTimeout(()=>el.classList.remove('snap'),400);
+    // If barely moved, treat as click
+    return !dragged;
+  }
+
+  // Mouse events
+  el.addEventListener('mousedown',e=>{
+    if(e.target.closest('.mini-pp')) return;
+    e.preventDefault();
+    onStart(e.clientX,e.clientY);
+    function mm(e){onMove(e.clientX,e.clientY);}
+    function mu(e){
+      document.removeEventListener('mousemove',mm);
+      document.removeEventListener('mouseup',mu);
+      const wasClick=onEnd(e.clientX);
+      if(wasClick) openPlayer();
+    }
+    document.addEventListener('mousemove',mm);
+    document.addEventListener('mouseup',mu);
+  });
+
+  // Touch events
+  el.addEventListener('touchstart',e=>{
+    if(e.target.closest('.mini-pp')) return;
+    const t=e.touches[0];
+    onStart(t.clientX,t.clientY);
+  },{passive:true});
+  el.addEventListener('touchmove',e=>{
+    const t=e.touches[0];
+    onMove(t.clientX,t.clientY);
+    if(dragged) e.preventDefault();
+  },{passive:false});
+  el.addEventListener('touchend',e=>{
+    const wasClick=onEnd(0);
+    if(wasClick) openPlayer();
+  });
+}
 </script>
 </body>
 </html>
+
