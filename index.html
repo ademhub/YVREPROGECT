@@ -118,7 +118,7 @@ body{font-family:-apple-system,'Helvetica Neue',sans-serif;}
 .t-num{width:20px;text-align:center;font-size:14px;color:var(--w30);font-variant-numeric:tabular-nums;flex-shrink:0;}
 .t-eq{width:20px;display:none;align-items:center;justify-content:center;flex-shrink:0;}
 .track.now .t-eq{display:flex;}
-.track.now .t-num{display:none;}
+.track.now .t-num{width:20px;text-align:center;font-size:14px;color:var(--w30);font-variant-numeric:tabular-nums;flex-shrink:0;}
 .bars{display:flex;align-items:flex-end;gap:2px;height:14px;}
 .bar{width:2.5px;background:var(--w);border-radius:1.5px;animation:eq 0.7s ease-in-out infinite;}
 .bar:nth-child(2){animation-delay:.18s;}.bar:nth-child(3){animation-delay:.36s;}
@@ -200,7 +200,7 @@ input[type=range].vsl::-webkit-slider-thumb{
 
 /* MINI PLAYER — right side */
 #mini{
-  position:fixed;right:14px;top:50%;
+  position:fixed;right:14px;top:50%;z-index:101 !important;
   transform:translateY(-50%) scale(0.88);
   z-index:100;opacity:0;pointer-events:none;
   transition:opacity .4s var(--ease),transform .4s var(--spring);
@@ -395,6 +395,95 @@ body.paused #page-player.active .p-cov-wrap{
   50%{transform:scale(1.012);}
 }
 .bass-pulse{animation:bass 0.3s ease-in-out;}
+
+/* ── MINI PLAYER PRESS & EXPAND ── */
+.mini-wrap{transition:transform .3s var(--spring),box-shadow .3s ease,width .45s var(--spring),height .45s var(--spring),border-radius .4s var(--spring) !important;}
+.mini-wrap:active{transform:scale(0.96) !important;}
+.mini-wrap.pressed{transform:scale(1.08) !important;box-shadow:0 12px 50px rgba(180,0,0,0.35),0 4px 20px rgba(0,0,0,0.8) !important;}
+
+/* expanded state */
+#mini.expanded .mini-wrap{
+  width:200px !important;
+  border-radius:22px !important;
+  padding:14px 14px 12px !important;
+  overflow:visible !important;
+}
+#mini.expanded .mini-img{
+  width:100% !important;
+  height:140px !important;
+  border-radius:14px !important;
+}
+#mini.expanded .mini-img img{border-radius:14px;}
+#mini.expanded .mini-wrap.playing .mini-img{border-radius:14px !important;}
+#mini.expanded .mini-wrap.playing .mini-img img{animation:none !important;}
+
+.mini-expand-info{
+  width:100%;flex-direction:column;gap:2px;margin-top:4px;
+  max-height:0;overflow:hidden;opacity:0;
+  transition:max-height .4s var(--spring),opacity .3s ease;
+}
+#mini.expanded .mini-expand-info{max-height:60px;opacity:1;}
+.mini-expand-title{
+  font-size:13px;font-weight:600;color:var(--w80);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mini-expand-artist{
+  font-size:11px;color:var(--w30);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+.mini-expand-ctrls{
+  width:100%;align-items:center;justify-content:space-between;
+  margin-top:6px;display:flex;
+  max-height:0;overflow:hidden;opacity:0;
+  transition:max-height .4s var(--spring),opacity .35s ease .05s;
+}
+#mini.expanded .mini-expand-ctrls{max-height:60px;opacity:1;}
+.mini-expand-btn{
+  width:32px;height:32px;background:none;border:none;
+  color:var(--w55);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .18s var(--spring);border-radius:50%;
+}
+.mini-expand-btn:hover{color:var(--w);transform:scale(1.15);}
+.mini-expand-btn:active{transform:scale(0.88);}
+.mini-expand-play{
+  width:38px;height:38px;border-radius:50%;
+  background:var(--w);border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s var(--spring);
+  box-shadow:0 3px 12px rgba(0,0,0,0.5);
+}
+.mini-expand-play svg{color:#000;}
+.mini-expand-play:active{transform:scale(0.9);}
+
+.mini-expand-prog{
+  width:100%;margin-top:8px;
+  max-height:0;overflow:hidden;opacity:0;
+  transition:max-height .4s var(--spring),opacity .35s ease .1s;
+}
+#mini.expanded .mini-expand-prog{max-height:60px;opacity:1;}
+.mini-expand-prog-bar{
+  width:100%;height:3px;background:rgba(255,255,255,0.12);
+  border-radius:2px;overflow:hidden;cursor:pointer;
+}
+.mini-expand-prog-fill{
+  height:100%;background:rgba(220,30,30,0.9);
+  border-radius:2px;transition:width .1s linear;width:0%;
+}
+.mini-expand-times{
+  display:flex;justify-content:space-between;margin-top:5px;
+}
+.mini-expand-times span{font-size:10px;color:var(--w30);font-variant-numeric:tabular-nums;}
+
+/* backdrop when expanded */
+#mini-backdrop{
+  position:fixed;inset:0;z-index:99;
+  background:transparent;
+  pointer-events:none;
+  transition:background .3s ease;
+}
+#mini-backdrop.on{pointer-events:all;background:rgba(0,0,0,0.01);}
 </style>
 </head>
 <body>
@@ -404,33 +493,27 @@ body.paused #page-player.active .p-cov-wrap{
 
 <!-- MINI PLAYER (right) -->
 <div id="mini">
-  <div class="mini-vol-hint" id="mini-vol-hint">🔊 80%</div>
   <div class="mini-wrap" id="mini-wrap">
     <div class="mini-glow"></div>
     <div class="mini-img"><img id="mini-art" /></div>
     <div class="mini-eq">
-      <div class="mini-eq-bar" style="height:4px"></div>
-      <div class="mini-eq-bar" style="height:7px"></div>
-      <div class="mini-eq-bar" style="height:4px"></div>
+      <div class="mini-eq-bar"></div>
+      <div class="mini-eq-bar"></div>
+      <div class="mini-eq-bar"></div>
+      <div class="mini-eq-bar"></div>
+      <div class="mini-eq-bar"></div>
     </div>
     <button class="mini-pp" id="mini-pp">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
     </button>
     <div class="mini-bar"><div class="mini-fill" id="mini-fill"></div></div>
-    <div class="mini-hidden" id="mini-hidden">
-      <button class="mini-hidden-btn" id="mini-like-btn" title="Like">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-      </button>
-      <button class="mini-hidden-btn" id="mini-shuf-btn" title="Shuffle">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
-      </button>
-    </div>
+
   </div>
 </div>
 
 <!-- PAGE ALBUM -->
 <div id="page-album" class="page active">
-  <div class="lbl"></div>
+  <div class="lbl">Bibliothèque</div>
   <div class="album-card" onclick="goTo('tracklist')">
     <div class="album-art">
       <div class="album-art-bg">
@@ -439,7 +522,7 @@ body.paused #page-player.active .p-cov-wrap{
     </div>
     <div class="album-text">
       <h2>Tracklist Vol.1</h2>
-      <div class="sub">YVRE &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; 3 titres</div>
+      <div class="sub">Tracklist Vol.1 &nbsp;·&nbsp; 2024 &nbsp;·&nbsp; 3 titres</div>
     </div>
   </div>
   <div class="album-btns">
@@ -466,7 +549,7 @@ body.paused #page-player.active .p-cov-wrap{
     <div class="tl-cov"><img id="tl-cover-img" style="width:100%;height:100%;object-fit:cover;" /></div>
     <div class="tl-meta">
       <h2>Tracklist Vol.1</h2>
-      <div class="ta">YVRE</div>
+      <div class="ta">Mixed Artists</div>
       <div class="tc">3 titres</div>
     </div>
   </div>
@@ -738,6 +821,7 @@ function refresh(){
   document.getElementById('p-heart').style.color=liked.has(idx)?'var(--red)':'var(--w30)';
   document.querySelectorAll('.track').forEach((el,i)=>el.classList.toggle('now',i===idx));
   updateDynBg();
+  if(window._miniRefresh) window._miniRefresh();
 }
 
 function uiPlay(){
@@ -751,6 +835,7 @@ function uiPlay(){
   document.body.classList.toggle('paused',!on);
   const mw=document.getElementById('mini-wrap');
   if(mw){mw.classList.toggle('playing',on);mw.classList.toggle('paused',!on);}
+  if(window._miniSyncPlay) window._miniSyncPlay();
 }
 
 // ── Progress ──
@@ -951,76 +1036,148 @@ function tickAnalyzer(){
 function initMini(){
   const wrap=document.getElementById('mini-wrap');
   const pp=document.getElementById('mini-pp');
-  const likeBtn=document.getElementById('mini-like-btn');
-  const shufBtn=document.getElementById('mini-shuf-btn');
   if(!wrap)return;
 
-  let tapTimer=null,tapCount=0,longTimer=null;
+  let pressTimer=null;
+  let longTimer=null;
+  let tapTimer=null;
+  let tapCount=0;
+  let expanded=false;
   let volDrag=false,volStartY=0,volStartVal=0;
+  let pressingDown=false;
 
-  // tap / double-tap / long-press on wrap
+  function expandMini(){
+    if(expanded) return;
+    expanded=true;
+    document.getElementById('mini').classList.add('expanded');
+    document.getElementById('mini-backdrop').classList.add('on');
+    updateExpandUI();
+  }
+
+  function collapseMini(){
+    if(!expanded) return;
+    expanded=false;
+    document.getElementById('mini').classList.remove('expanded');
+    document.getElementById('mini-backdrop').classList.remove('on');
+    wrap.classList.remove('pressed');
+  }
+
+  function updateExpandUI(){
+    const t=T[idx];if(!t)return;
+    const et=document.getElementById('mini-exp-title');
+    const ea=document.getElementById('mini-exp-artist');
+    if(et) et.textContent=t.title;
+    if(ea) ea.textContent=t.artist;
+  }
+
+  // Close expanded when clicking backdrop
+  document.getElementById('mini-backdrop').addEventListener('click',()=>collapseMini());
+
+  // Sync expanded play icon
+  function syncExpandPlay(){
+    const ico=document.getElementById('mini-exp-ico');
+    if(ico) ico.innerHTML=playing?'<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>':'<path d="M8 5v14l11-7z"/>';
+  }
+
+  // Sync progress in expanded
+  audio.addEventListener('timeupdate',()=>{
+    if(!expanded) return;
+    const p=audio.duration?(audio.currentTime/audio.duration)*100:0;
+    const ef=document.getElementById('mini-exp-fill');
+    const ec=document.getElementById('mini-exp-cur');
+    const et2=document.getElementById('mini-exp-tot');
+    if(ef) ef.style.width=p+'%';
+    if(ec) ec.textContent=fmt(audio.currentTime);
+    if(et2) et2.textContent=fmt(audio.duration);
+  });
+
+  // Progress bar click in expanded
+  const expBar=document.getElementById('mini-exp-bar');
+  if(expBar) expBar.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(audio.duration){
+      const r=expBar.getBoundingClientRect();
+      audio.currentTime=((e.clientX-r.left)/r.width)*audio.duration;
+    }
+  });
+
+  // Patch uiPlay to also update expanded icon
+  const _origUiPlay=uiPlay;
+  window._miniSyncPlay=syncExpandPlay;
+
+  // MOUSE interactions
+  wrap.addEventListener('mousedown',e=>{
+    if(e.target.closest('.mini-expand-btn')||e.target.closest('.mini-expand-play')||e.target===pp||e.target.closest('.mini-pp')) return;
+    pressingDown=true;
+    wrap.classList.add('pressed');
+    // hold 400ms = expand
+    pressTimer=setTimeout(()=>{
+      if(pressingDown){expandMini();}
+    },400);
+  });
+
+  document.addEventListener('mouseup',e=>{
+    if(!pressingDown) return;
+    pressingDown=false;
+    clearTimeout(pressTimer);
+    wrap.classList.remove('pressed');
+    if(expanded) return;
+    // was a click — open full player
+    if(e.target.closest('#mini-wrap')&&!e.target.closest('.mini-pp')){
+      openPlayer();collapseMini();
+    }
+  });
+
+  // TOUCH interactions
   wrap.addEventListener('touchstart',e=>{
-    if(e.target===pp||e.target.closest('.mini-pp')||
-       e.target===likeBtn||e.target===shufBtn||
-       e.target.closest('.mini-hidden-btn')) return;
-    longTimer=setTimeout(()=>{longTimer=null;openPlayer();},500);
-    volDrag=false;volStartY=e.touches[0].clientY;volStartVal=audio.volume;
+    if(e.target.closest('.mini-expand-btn')||e.target.closest('.mini-expand-play')||e.target===pp||e.target.closest('.mini-pp')) return;
+    pressingDown=true;
+    wrap.classList.add('pressed');
+    volStartY=e.touches[0].clientY;volStartVal=audio.volume;
+    volDrag=false;
+    pressTimer=setTimeout(()=>{
+      if(pressingDown){expandMini();}
+    },400);
   },{passive:true});
 
   wrap.addEventListener('touchmove',e=>{
-    clearTimeout(longTimer);longTimer=null;
-    const dy=volStartY-e.touches[0].clientY;
-    if(Math.abs(dy)>10){
-      volDrag=true;
-      const newVol=Math.max(0,Math.min(1,volStartVal+dy/120));
-      audio.volume=newVol;
-      document.getElementById('vol').value=newVol*100;
-      localStorage.setItem('vol',newVol);
-      const hint=document.getElementById('mini-vol-hint');
-      if(hint){hint.textContent='🔊 '+Math.round(newVol*100)+'%';hint.classList.add('show');}
+    clearTimeout(pressTimer);
+    if(expanded){
+      // vol drag in expanded
+      const dy=volStartY-e.touches[0].clientY;
+      if(Math.abs(dy)>8){
+        volDrag=true;
+        const v=Math.max(0,Math.min(1,volStartVal+dy/100));
+        audio.volume=v;
+        document.getElementById('vol').value=v*100;
+        localStorage.setItem('vol',v);
+      }
     }
   },{passive:true});
 
   wrap.addEventListener('touchend',e=>{
-    clearTimeout(longTimer);longTimer=null;
-    const hint=document.getElementById('mini-vol-hint');
-    if(hint) setTimeout(()=>hint.classList.remove('show'),800);
+    clearTimeout(pressTimer);
+    const wasPressing=pressingDown;
+    pressingDown=false;
+    wrap.classList.remove('pressed');
     if(volDrag){volDrag=false;return;}
-    if(e.target===pp||e.target.closest('.mini-pp')) return;
-    // tap count for double tap = skip
-    tapCount++;
-    if(tapTimer) clearTimeout(tapTimer);
-    tapTimer=setTimeout(()=>{
-      if(tapCount===1) togglePlay();
-      else if(tapCount>=2) nextTrack();
-      tapCount=0;
-    },220);
+    if(e.target.closest('.mini-expand-btn')||e.target.closest('.mini-expand-play')) return;
+    if(e.target===pp||e.target.closest('.mini-pp')){togglePlay();return;}
+    if(expanded) return;
+    if(wasPressing){
+      // short tap = open player
+      openPlayer();
+    }
   },{passive:true});
 
-  // swipe left/right on mini = change track
-  let sx=0;
-  wrap.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;},{passive:true});
-  wrap.addEventListener('touchend',e=>{
-    const dx=e.changedTouches[0].clientX-sx;
-    if(Math.abs(dx)>30){dx<0?nextTrack():prevTrack();}
-  },{passive:true});
+  pp.addEventListener('click',e=>{e.stopPropagation();togglePlay();syncExpandPlay();});
 
-  // mouse: click play/pause, no drag conflict
-  pp.addEventListener('click',e=>{e.stopPropagation();togglePlay();});
-
-  // like / shuffle buttons
-  if(likeBtn) likeBtn.addEventListener('click',e=>{
-    e.stopPropagation();
-    liked.has(idx)?liked.delete(idx):(liked.add(idx),toast('♥ Ajouté'));
-    localStorage.setItem('liked',JSON.stringify([...liked]));
-    likeBtn.classList.toggle('on',liked.has(idx));
-    document.getElementById('p-heart').style.color=liked.has(idx)?'var(--red)':'var(--w30)';
-  });
-  if(shufBtn) shufBtn.addEventListener('click',e=>{
-    e.stopPropagation();toggleShuffle();
-    shufBtn.classList.toggle('on',shuf);
-  });
+  // Patch refresh to update expanded info
+  const _origRefresh=refresh;
+  window._miniRefresh=updateExpandUI;
 }
+
+
 
 // ── Drag mini player ──
 function initDrag(){
