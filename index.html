@@ -403,7 +403,7 @@ body.paused #page-player.active .p-cov-wrap{
     </div>
     <div class="album-text">
       <h2>Tracklist Vol.1</h2>
-      <div class="sub">Tracklist Vol.1 &nbsp;·&nbsp; 2024 &nbsp;·&nbsp; 3 titres</div>
+      <div class="sub">YVRE &nbsp;·&nbsp; 2026 &nbsp;·&nbsp; 3 titres</div>
     </div>
   </div>
   <div class="album-btns">
@@ -430,7 +430,7 @@ body.paused #page-player.active .p-cov-wrap{
     <div class="tl-cov"><img id="tl-cover-img" style="width:100%;height:100%;object-fit:cover;" /></div>
     <div class="tl-meta">
       <h2>Tracklist Vol.1</h2>
-      <div class="ta">Mixed Artists</div>
+      <div class="ta">YVRE</div>
       <div class="tc">3 titres</div>
     </div>
   </div>
@@ -519,16 +519,7 @@ const savedVol=parseFloat(localStorage.getItem('vol')||'0.8');
 audio.volume=savedVol;
 
 // ── Audio fade util ──
-function fadeTo(vol, dur=300, cb){
-  clearInterval(fadeTimer);
-  const steps=20, interval=dur/steps, delta=(vol-audio.volume)/steps;
-  fadeTimer=setInterval(()=>{
-    audio.volume=Math.max(0,Math.min(1,audio.volume+delta));
-    if((delta>0&&audio.volume>=vol)||(delta<0&&audio.volume<=vol)){
-      audio.volume=vol; clearInterval(fadeTimer); if(cb)cb();
-    }
-  },interval);
-}
+
 
 function load(i,andPlay,crossfade){
   const t=T[i];if(!t)return;
