@@ -1036,147 +1036,70 @@ function tickAnalyzer(){
 function initMini(){
   const wrap=document.getElementById('mini-wrap');
   const pp=document.getElementById('mini-pp');
-  if(!wrap)return;
+  if(!wrap||!pp)return;
 
-  let pressTimer=null;
-  let longTimer=null;
-  let tapTimer=null;
-  let tapCount=0;
   let expanded=false;
-  let volDrag=false,volStartY=0,volStartVal=0;
-  let pressingDown=false;
 
   function expandMini(){
-    if(expanded) return;
     expanded=true;
     document.getElementById('mini').classList.add('expanded');
     document.getElementById('mini-backdrop').classList.add('on');
-    updateExpandUI();
+    const t=T[idx];
+    document.getElementById('mini-exp-title').textContent=t?t.title:'';
+    document.getElementById('mini-exp-artist').textContent=t?t.artist:'';
+    syncExpandPlay();
   }
-
   function collapseMini(){
-    if(!expanded) return;
     expanded=false;
     document.getElementById('mini').classList.remove('expanded');
     document.getElementById('mini-backdrop').classList.remove('on');
-    wrap.classList.remove('pressed');
   }
-
-  function updateExpandUI(){
-    const t=T[idx];if(!t)return;
-    const et=document.getElementById('mini-exp-title');
-    const ea=document.getElementById('mini-exp-artist');
-    if(et) et.textContent=t.title;
-    if(ea) ea.textContent=t.artist;
-  }
-
-  // Close expanded when clicking backdrop
-  document.getElementById('mini-backdrop').addEventListener('click',()=>collapseMini());
-
-  // Sync expanded play icon
   function syncExpandPlay(){
     const ico=document.getElementById('mini-exp-ico');
-    if(ico) ico.innerHTML=playing?'<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>':'<path d="M8 5v14l11-7z"/>';
+    if(ico)ico.innerHTML=playing
+      ?'<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
+      :'<path d="M8 5v14l11-7z"/>';
   }
+  window._miniSyncPlay=syncExpandPlay;
+  window._miniRefresh=()=>{
+    if(!expanded)return;
+    const t=T[idx];
+    document.getElementById('mini-exp-title').textContent=t?t.title:'';
+    document.getElementById('mini-exp-artist').textContent=t?t.artist:'';
+  };
 
-  // Sync progress in expanded
+  document.getElementById('mini-backdrop').addEventListener('click',collapseMini);
+
   audio.addEventListener('timeupdate',()=>{
-    if(!expanded) return;
-    const p=audio.duration?(audio.currentTime/audio.duration)*100:0;
+    if(!expanded||!audio.duration)return;
+    const p=(audio.currentTime/audio.duration)*100;
     const ef=document.getElementById('mini-exp-fill');
     const ec=document.getElementById('mini-exp-cur');
-    const et2=document.getElementById('mini-exp-tot');
-    if(ef) ef.style.width=p+'%';
-    if(ec) ec.textContent=fmt(audio.currentTime);
-    if(et2) et2.textContent=fmt(audio.duration);
+    const et=document.getElementById('mini-exp-tot');
+    if(ef)ef.style.width=p+'%';
+    if(ec)ec.textContent=fmt(audio.currentTime);
+    if(et)et.textContent=fmt(audio.duration);
   });
 
-  // Progress bar click in expanded
   const expBar=document.getElementById('mini-exp-bar');
-  if(expBar) expBar.addEventListener('click',e=>{
+  if(expBar)expBar.addEventListener('click',e=>{
     e.stopPropagation();
-    if(audio.duration){
-      const r=expBar.getBoundingClientRect();
-      audio.currentTime=((e.clientX-r.left)/r.width)*audio.duration;
-    }
+    if(!audio.duration)return;
+    const r=expBar.getBoundingClientRect();
+    audio.currentTime=((e.clientX-r.left)/r.width)*audio.duration;
   });
-
-  // Patch uiPlay to also update expanded icon
-  const _origUiPlay=uiPlay;
-  window._miniSyncPlay=syncExpandPlay;
-
-  // MOUSE interactions
-  wrap.addEventListener('mousedown',e=>{
-    if(e.target.closest('.mini-expand-btn')||e.target.closest('.mini-expand-play')||e.target===pp||e.target.closest('.mini-pp')) return;
-    pressingDown=true;
-    wrap.classList.add('pressed');
-    // hold 400ms = expand
-    pressTimer=setTimeout(()=>{
-      if(pressingDown){expandMini();}
-    },400);
-  });
-
-  document.addEventListener('mouseup',e=>{
-    if(!pressingDown) return;
-    pressingDown=false;
-    clearTimeout(pressTimer);
-    wrap.classList.remove('pressed');
-    if(expanded) return;
-    // was a click — open full player
-    if(e.target.closest('#mini-wrap')&&!e.target.closest('.mini-pp')){
-      openPlayer();collapseMini();
-    }
-  });
-
-  // TOUCH interactions
-  wrap.addEventListener('touchstart',e=>{
-    if(e.target.closest('.mini-expand-btn')||e.target.closest('.mini-expand-play')||e.target===pp||e.target.closest('.mini-pp')) return;
-    pressingDown=true;
-    wrap.classList.add('pressed');
-    volStartY=e.touches[0].clientY;volStartVal=audio.volume;
-    volDrag=false;
-    pressTimer=setTimeout(()=>{
-      if(pressingDown){expandMini();}
-    },400);
-  },{passive:true});
-
-  wrap.addEventListener('touchmove',e=>{
-    clearTimeout(pressTimer);
-    if(expanded){
-      // vol drag in expanded
-      const dy=volStartY-e.touches[0].clientY;
-      if(Math.abs(dy)>8){
-        volDrag=true;
-        const v=Math.max(0,Math.min(1,volStartVal+dy/100));
-        audio.volume=v;
-        document.getElementById('vol').value=v*100;
-        localStorage.setItem('vol',v);
-      }
-    }
-  },{passive:true});
-
-  wrap.addEventListener('touchend',e=>{
-    clearTimeout(pressTimer);
-    const wasPressing=pressingDown;
-    pressingDown=false;
-    wrap.classList.remove('pressed');
-    if(volDrag){volDrag=false;return;}
-    if(e.target.closest('.mini-expand-btn')||e.target.closest('.mini-expand-play')) return;
-    if(e.target===pp||e.target.closest('.mini-pp')){togglePlay();return;}
-    if(expanded) return;
-    if(wasPressing){
-      // short tap = open player
-      openPlayer();
-    }
-  },{passive:true});
 
   pp.addEventListener('click',e=>{e.stopPropagation();togglePlay();syncExpandPlay();});
 
-  // Patch refresh to update expanded info
-  const _origRefresh=refresh;
-  window._miniRefresh=updateExpandUI;
-}
+  const expPlay=document.getElementById('mini-exp-play');
+  if(expPlay)expPlay.addEventListener('click',e=>{e.stopPropagation();togglePlay();syncExpandPlay();});
 
+  wrap.addEventListener('dblclick',e=>{
+    if(e.target.closest('.mini-pp')||e.target.closest('.mini-expand-play')||e.target.closest('.mini-expand-btn'))return;
+    if(expanded) collapseMini();
+    else expandMini();
+  });
+}
 
 
 // ── Drag mini player ──
